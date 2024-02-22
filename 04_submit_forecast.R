@@ -6,7 +6,17 @@ submit_forecast <- function(forecast,team_info,submit=FALSE){
   
   #Forecast output file name in standards requires for Challenge.  
   # csv.gz means that it will be compressed
+
+  forecast_file <- paste0("aquatics","-",min(forecast$reference_datetime),"-",team_info$team_name,".csv.gz")
+  
+  ## final format tweaks for submission
+  forecast = forecast |> mutate(model_id = team_info$team_name, family="ensemble") |>
+    relocate(model_id,reference_datetime) |>
+    relocate(parameter,.before = variable) |>
+    relocate(family,.before = parameter)
+
   forecast_file <- paste0("aquatics","-",min(forecast$time),"-",team_info$team_name,".csv.gz")
+
   
   #Write csv to disk
   write_csv(forecast, forecast_file)
@@ -21,7 +31,11 @@ submit_forecast <- function(forecast,team_info,submit=FALSE){
         forecast_model_id =  system("git rev-parse HEAD", intern=TRUE), ## current git SHA
         name = "Air temperature to water temperature linear regression plus assume saturated oxygen", 
         type = "empirical",  
+
+        repository = "git@github.com:klosada/EE585-Exercise4.git"   ## put your REPO here *******************
+
         repository = "https://github.com/ecoforecast/EF_Activities"   ## put your REPO here *******************
+
       ),
       initial_conditions = list(
         status = "absent"
@@ -49,10 +63,18 @@ submit_forecast <- function(forecast,team_info,submit=FALSE){
     )
   )
   
+
+  ## this function needs to be restored
+  #metadata_file <- neon4cast::generate_metadata(forecast_file, team_info$team_list, model_metadata)
+  
+  if(submit){
+    neon4cast::submit(forecast_file = forecast_file, ask = FALSE) #metadata = metadata_file,
+
   metadata_file <- neon4cast::generate_metadata(forecast_file, team_info$team_list, model_metadata)
   
   if(submit){
     neon4cast::submit(forecast_file = forecast_file, metadata = metadata_file, ask = FALSE)
+
   }
   
 }
